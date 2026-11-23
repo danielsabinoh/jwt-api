@@ -1,19 +1,24 @@
-const authService = require("./auth.service");
+const jwt = require('jsonwebtoken');
+const { User } = require('../models');
+const { fail } = require('../config/http');
 
-const authMiddleware = async (req, res, next) => {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-        return res.status(401).json({ error: 'Access denied. No token provided.' });
-    }
-
+async function authenticate(req, res, next) {
+    const match = /^Bearer (\S+)$/i.exec(req.get('authorization') || '');
+    if (!match) fail(401, 'Sessão necessária.');
+    let payload;
     try {
-        const decoded = await authService.verifyToken(token);
-        req.user = decoded;
-        next();
-    } catch (error) {
-        res.status(400).json({ error: 'Invalid token.' });
+        payload = jwt.verify(match[1], process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    } catch {
+        fail(401, 'Token inválido ou expirado.');
     }
-};
+    req.user = await User.findByPk(payload.id);
+    if (!req.user?.active) fail(401, 'Sessão indisponível.');
+    next();
+}
 
-module.exports = authMiddleware;
+function isAdmin(req, res, next) {
+    if (!req.user.isAdmin) fail(403, 'Acesso exclusivo do administrador.');
+    next();
+}
+
+module.exports = { authenticate, isAdmin };

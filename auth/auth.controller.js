@@ -1,25 +1,10 @@
-const authService = require('./auth.service');
+const auth = require('./auth.service');
+const { publicUser } = require('../user/user.service');
 
-const authController = {
-    async login(req, res) {
-        try {
-            const { email, password } = req.body;
-            const token = await authService.login(email, password);
-            res.json({ token });
-        } catch (error) {
-            res.status(401).json({ error: error.message });
-        }
-    },
-
-    async logout(req, res) {
-        try {
-            const token = req.headers.authorization.split(' ')[1];
-            await authService.logout(token);
-            res.json({ message: 'Logout successful' });
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
-    }
+exports.login = async (req, res) => res.json(await auth.login(req.body || {}));
+exports.refresh = async (req, res) => res.json(await auth.refresh(req.body?.refreshToken));
+exports.logout = async (req, res) => {
+    await auth.logout(req.user.id, req.body?.refreshToken);
+    res.sendStatus(204);
 };
-
-module.exports = authController;
+exports.me = (req, res) => res.json(publicUser(req.user));

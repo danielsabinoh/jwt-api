@@ -1,12 +1,11 @@
-const {Router} = require('express');
-const router = Router();
+const router = require('express').Router();
+const controller = require('./user.controller');
+const { authenticate, isAdmin } = require('../auth/auth.middleware');
 
-const userController = require('./user.controller');
-const authMiddleware = require('../auth/auth.middleware');
-
-router.post('/', userController.create);
-router.get('/:id', authMiddleware, userController.findById);
-router.get('/email/:email', authMiddleware, userController.findByEmail);
-router.get('/', authMiddleware, userController.findAll);
+router.use(authenticate, isAdmin);
+router.get('/', controller.list);
+router.post('/', controller.create);
+router.put('/:id', controller.update);
+router.patch('/:id/active', controller.setActive);
 
 module.exports = router;
